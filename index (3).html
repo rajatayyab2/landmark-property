@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LandMark Property - Real estate on the map</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+:root{--navy:#0E2233;--navy2:#1A3550;--gold:#D9A21B;--blue:#2F6DB5;--ink:#14212A;--paper:#F4F5F3;--line:#DDE2E5;--red:#B3261E;--w:300px}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font:15px/1.45 system-ui,"Segoe UI",Roboto,sans-serif;color:var(--ink)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer;border:0;border-radius:6px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+#map{position:fixed;top:0;bottom:0;left:var(--w);right:0}
+#side{position:fixed;top:0;bottom:0;left:0;width:var(--w);background:var(--navy);color:#fff;overflow-y:auto;z-index:1000;display:flex;flex-direction:column}
+.brandrow{display:flex;gap:12px;align-items:center;padding:18px 18px 14px}
+.mark{width:40px;height:40px;border-radius:8px;background:var(--gold);color:var(--navy);display:grid;place-items:center;font-weight:800;font-size:17px}
+.brandrow b{display:block;font-size:17px}.brandrow small{opacity:.7}
+.acct{margin:0 18px 6px;padding:12px;border-radius:8px;background:var(--navy2);font-size:13px}
+.acct b{display:block;word-break:break-all;margin-bottom:8px;font-size:14px}
+.acct button{width:100%;padding:9px;background:var(--gold);color:var(--navy);font-weight:700}
+.acct button.out{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);font-weight:500}
+.grp{margin:16px 18px 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.6}
+.nav{display:flex;align-items:center;gap:10px;width:100%;padding:11px 18px;background:transparent;color:#fff;text-align:left;border-radius:0;border-left:3px solid transparent}
+.nav:hover{background:rgba(255,255,255,.07)}
+.nav.on{background:rgba(255,255,255,.12);border-left-color:var(--gold);font-weight:600}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;background:#8A949B}
+.dot.s{background:var(--gold)}.dot.w{background:#6FA3E0}
+.flt{padding:6px 18px 24px;margin-top:auto}
+.flt input,.flt select{width:100%;margin-top:8px;padding:9px;border:0;border-radius:6px;background:#fff;color:var(--ink)}
+.flt .r{display:flex;gap:8px}.flt .r input{min-width:0}
+.flt .c{display:flex;gap:8px}.flt .c button{margin-top:8px;padding:0 14px;background:var(--gold);color:var(--navy);font-weight:700}
+.top{display:none;position:fixed;top:0;left:0;right:0;height:52px;z-index:900;background:var(--navy);color:#fff;align-items:center;gap:12px;padding:0 12px;font-weight:700}
+.top button{background:transparent;color:#fff;font-size:24px;padding:4px 10px}
+#scrim{display:none;position:fixed;inset:0;background:rgba(14,34,51,.5);z-index:999}
+.hintw{display:none;position:fixed;top:14px;left:var(--w);right:0;justify-content:center;z-index:500;pointer-events:none;padding:0 10px}
+.hint{pointer-events:auto;background:var(--navy);color:#fff;padding:9px 14px;border-radius:8px;display:flex;gap:12px;align-items:center;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.hint button{background:rgba(255,255,255,.18);color:#fff;padding:4px 10px}
+.count{position:fixed;left:calc(var(--w) + 12px);bottom:24px;z-index:500;background:#fff;padding:6px 12px;border-radius:6px;font-size:13px;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.modal{display:none;position:fixed;inset:0;z-index:2000;background:rgba(14,34,51,.6);align-items:center;justify-content:center;padding:16px}
+.modal.on{display:flex}
+.card{background:#fff;border-radius:10px;padding:22px;width:100%;max-width:420px;max-height:92vh;overflow:auto}
+.card h2{margin:0 0 4px;font-size:20px}.card p.sub{margin:0 0 6px;color:#566;font-size:14px}
+.card label{display:block;font-size:13px;font-weight:600;margin:12px 0 4px}
+.card input,.card select,.card textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:6px}
+.two{display:flex;gap:8px}.two>div{flex:1}
+.row{display:flex;gap:8px;margin-top:16px}.row button{flex:1;padding:10px;font-weight:700;background:var(--navy);color:#fff}
+.row .cancel{background:var(--paper);color:var(--ink)}
+button:disabled{opacity:.6;cursor:wait}
+.err{color:var(--red);font-size:14px;min-height:20px;margin-top:8px}
+.iw{max-width:250px;font-size:14px}
+.iw img{width:100%;max-height:130px;object-fit:cover;border-radius:6px;margin-bottom:6px}
+.iw h3{margin:0 0 4px;font-size:16px}
+.iw .tag{display:inline-block;font-size:12px;background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:1px 6px;margin:0 4px 4px 0}
+.iw .tag.off{background:#ddd}
+.iw .price{font-weight:800;color:var(--navy);font-size:16px}
+.iw .area{color:#566;font-size:13px}.iw p{margin:6px 0}
+.iw .acts{display:flex;gap:6px;flex-wrap:wrap}
+.iw a,.iw button{padding:7px 12px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:700;background:var(--navy);color:#fff;border:0}
+.iw .wa{background:#1B8A4B}.iw .sec{background:#5A6670}.iw .del{background:var(--red)}
+@media (max-width:820px){
+ :root{--w:0px}
+ .top{display:flex}
+ #map{top:52px}
+ #side{width:290px;max-width:86vw;transform:translateX(-100%);transition:transform .2s}
+ #side.open{transform:none}
+ #scrim.on{display:block}
+ .hintw{top:64px}.count{left:12px}
+}
+@media (prefers-reduced-motion:reduce){#side{transition:none}}
+</style>
+</head>
+<body>
+<header class="top"><button id="menuBtn" aria-label="Open menu">&#9776;</button>LandMark Property</header>
+<div id="scrim"></div>
+
+<aside id="side" aria-label="Main menu">
+  <div class="brandrow"><div class="mark">LP</div><div><b>LandMark Property</b><small>Real estate on the map</small></div></div>
+  <div class="acct" id="acct"></div>
+  <nav>
+    <p class="grp">Explore</p>
+    <button class="nav" data-mode="sale"><i class="dot s"></i>Properties for Sale</button>
+    <button class="nav" data-mode="wanted"><i class="dot w"></i>Buyer Requirements</button>
+    <p class="grp">Post</p>
+    <button class="nav" id="navAdd"><i class="dot s"></i>List a Property for Sale</button>
+    <button class="nav" id="navReq"><i class="dot w"></i>Post a Requirement</button>
+    <p class="grp">My Account</p>
+    <button class="nav" data-mode="mySale"><i class="dot"></i>My Listings</button>
+    <button class="nav" data-mode="myWanted"><i class="dot"></i>My Requirements</button>
+  </nav>
+  <div class="flt">
+    <p class="grp" style="margin:12px 0 0">Search &amp; Filter</p>
+    <div class="c"><input id="city" type="search" placeholder="Go to city or area" aria-label="City or area" enterkeyhint="search"><button id="go" type="button">Go</button></div>
+    <input id="fq" type="search" placeholder="Keyword" aria-label="Keyword">
+    <select id="ft" aria-label="Property type"><option value="">All types</option><option>Plot</option><option>House</option><option>Flat</option><option>Commercial</option><option>Agricultural</option></select>
+    <div class="r"><input id="fmin" inputmode="numeric" placeholder="Min PKR" aria-label="Minimum price"><input id="fmax" inputmode="numeric" placeholder="Max PKR" aria-label="Maximum price"></div>
+  </div>
+</aside>
+<div id="map"></div>
+<div class="hintw" id="hintw"><div class="hint"><span id="hintt"></span><button id="hintx" type="button">Cancel</button></div></div>
+<div class="count" id="count"></div>
+
+<div class="modal" id="authModal"><div class="card">
+  <h2 id="authTitle">Sign in</h2><p class="sub">Use your email to list properties and post requirements.</p>
+  <label for="em">Email</label><input id="em" type="email" autocomplete="email">
+  <label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
+  <div class="err" id="authErr"></div>
+  <div class="row"><button id="authGo">Sign in</button><button class="cancel" id="authX">Close</button></div>
+  <p style="font-size:14px;margin:14px 0 0"><a href="#" id="swap">Create a new account</a></p>
+</div></div>
+
+<div class="modal" id="saleModal"><div class="card">
+  <h2>List a Property for Sale</h2><p class="sub">Your pin is placed. Add the details buyers will see.</p>
+  <label for="st">Title</label><input id="st" placeholder="10 Marla plot, Phase 6">
+  <div class="two"><div><label for="sty">Type</label><select id="sty"><option>Plot</option><option>House</option><option>Flat</option><option>Commercial</option><option>Agricultural</option></select></div>
+  <div><label for="ssz">Size</label><input id="ssz" placeholder="10 Marla"></div></div>
+  <label for="sp">Price (PKR)</label><input id="sp" inputmode="numeric" placeholder="12500000">
+  <label for="sa">Area / City</label><input id="sa" placeholder="DHA Phase 6, Lahore">
+  <label for="sd">Description</label><textarea id="sd" rows="3"></textarea>
+  <label for="sph">Contact number</label><input id="sph" type="tel" placeholder="03001234567">
+  <label for="simg">Photo (optional, max 5 MB)</label><input id="simg" type="file" accept="image/*">
+  <div class="err" id="saleErr"></div>
+  <div class="row"><button id="saleSave">Publish listing</button><button class="cancel" data-close="saleModal">Close</button></div>
+</div></div>
+
+<div class="modal" id="reqModal"><div class="card">
+  <h2>Post a Requirement</h2><p class="sub">Tell sellers what you are looking for. The pin marks your preferred area.</p>
+  <label for="rt">What do you need?</label><input id="rt" placeholder="Looking for a 5 Marla house">
+  <label for="rty">Type</label><select id="rty"><option>Plot</option><option>House</option><option>Flat</option><option>Commercial</option><option>Agricultural</option></select>
+  <div class="two"><div><label for="rmin">Budget min (PKR)</label><input id="rmin" inputmode="numeric"></div>
+  <div><label for="rmax">Budget max (PKR)</label><input id="rmax" inputmode="numeric"></div></div>
+  <label for="ra">Preferred area / City</label><input id="ra" placeholder="Bahria Town, Rawalpindi">
+  <label for="rd">Details</label><textarea id="rd" rows="3"></textarea>
+  <label for="rph">Contact number</label><input id="rph" type="tel" placeholder="03001234567">
+  <div class="err" id="reqErr"></div>
+  <div class="row"><button id="reqSave">Post requirement</button><button class="cancel" data-close="reqModal">Close</button></div>
+</div></div>
+
+<script>
+window.CONFIG={apiKey:"AIzaSyCC_JpfWWgsGkENCPs5Jc-Gq9K81tOCO98",authDomain:"landmark-land.firebaseapp.com",projectId:"landmark-land",storageBucket:"landmark-land.firebasestorage.app",appId:"1:533684184155:web:87561c626e269b82534b7e"};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,onAuthStateChanged,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,sendEmailVerification} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {getFirestore,collection,addDoc,onSnapshot,deleteDoc,doc,updateDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getStorage,ref,uploadBytes,getDownloadURL} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fp=n=>{n=Number(n)||0;const f=v=>v.toFixed(2).replace(/\.?0+$/,'');return 'PKR '+(n>=1e7?f(n/1e7)+' Crore':n>=1e5?f(n/1e5)+' Lakh':n.toLocaleString())};
+const digits=s=>String(s||"").replace(/\D/g,"");
+
+const app=initializeApp(CONFIG),auth=getAuth(app),db=getFirestore(app),store=getStorage(app);
+const sat=L.layerGroup([
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Imagery &copy; Esri'}),
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19})]);
+const streets=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'});
+const map=L.map('map',{center:[30.38,69.35],zoom:6,layers:[sat],zoomControl:false});
+L.control.zoom({position:'bottomright'}).addTo(map);
+L.control.layers({'Satellite':sat,'Streets':streets},null,{position:'bottomright'}).addTo(map);
+const layer=L.layerGroup().addTo(map);
+let me=null,mode='sale',sale=[],reqs=[],picking=null,pending=null,signup=false;
+
+/* ---------- Data (live) ---------- */
+const watch=(c,k,set)=>onSnapshot(collection(db,c),s=>{set(s.docs.map(d=>({id:d.id,kind:k,...d.data()})));draw()},e=>{$('count').textContent='Could not load data ('+e.code+')'});
+watch('listings','sale',a=>sale=a);
+watch('requirements','req',a=>reqs=a);
+
+const isReq=()=>mode.endsWith('anted');
+function view(){
+  const k=isReq()?'req':'sale',mine=mode.startsWith('my');
+  const q=$('fq').value.trim().toLowerCase(),t=$('ft').value,mn=+$('fmin').value||0,mx=+$('fmax').value||Infinity;
+  return (k==='sale'?sale:reqs).filter(x=>{
+    if(mine&&(!me||x.owner!==me.uid))return false;
+    if(t&&x.type!==t)return false;
+    if(q&&!((x.title||'')+' '+(x.desc||'')+' '+(x.area||'')).toLowerCase().includes(q))return false;
+    const lo=k==='sale'?x.price:(x.min||0),hi=k==='sale'?x.price:(x.max||Infinity);
+    return hi>=mn&&lo<=mx;
+  });
+}
+function draw(){
+  layer.clearLayers();
+  const v=view();
+  v.forEach(x=>{
+    const off=x.status==='sold'||x.status==='closed';
+    L.circleMarker([x.lat,x.lng],{radius:11,fillColor:off?'#8A949B':x.kind==='sale'?'#D9A21B':'#2F6DB5',fillOpacity:1,color:'#0E2233',weight:2}).on('click',()=>show(x)).addTo(layer);
+  });
+  $('count').textContent=isReq()?v.length+(v.length===1?' requirement':' requirements'):v.length+(v.length===1?' property':' properties');
+  document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===mode));
+}
+function show(x){
+  const s=x.kind==='sale',off=x.status==='sold'||x.status==='closed',tel=digits(x.phone),wa=tel.startsWith('0')?'92'+tel.slice(1):tel;
+  const price=s?fp(x.price):((x.min||x.max)?fp(x.min||0)+' to '+fp(x.max||0):'Budget not specified');
+  const d=document.createElement('div');d.className='iw';
+  d.innerHTML=`${x.photo?`<img src="${esc(x.photo)}" alt="">`:''}<h3>${esc(x.title)}</h3>
+  <div><span class="tag">${esc(x.type)}</span>${x.size?`<span class="tag">${esc(x.size)}</span>`:''}<span class="tag ${off?'off':''}">${s?(off?'Sold':'For Sale'):(off?'Closed':'Wanted')}</span></div>
+  <div class="price">${price}</div>${x.area?`<div class="area">${esc(x.area)}</div>`:''}<p>${esc(x.desc)}</p>
+  <div class="acts"><a href="tel:${esc(tel)}">Call</a><a class="wa" href="https://wa.me/${esc(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`;
+  if(me&&me.uid===x.owner){
+    const a=d.querySelector('.acts'),col=s?'listings':'requirements';
+    const t=document.createElement('button');t.className='sec';t.textContent=off?(s?'Mark as available':'Reopen'):(s?'Mark as sold':'Close');
+    t.onclick=async()=>{await updateDoc(doc(db,col,x.id),{status:off?(s?'sale':'open'):(s?'sold':'closed')});map.closePopup()};
+    const r=document.createElement('button');r.className='del';r.textContent='Delete';
+    r.onclick=async()=>{if(confirm('Delete this post?')){await deleteDoc(doc(db,col,x.id));map.closePopup()}};
+    a.append(t,r);
+  }
+  L.popup({maxWidth:270}).setLatLng([x.lat,x.lng]).setContent(d).openOn(map);
+}
+
+/* ---------- Menu ---------- */
+const closeSide=()=>{$('side').classList.remove('open');$('scrim').classList.remove('on')};
+$('menuBtn').onclick=()=>{$('side').classList.add('open');$('scrim').classList.add('on')};
+$('scrim').onclick=closeSide;
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{
+  if(b.dataset.mode.startsWith('my')&&!me){openAuth();return}
+  mode=b.dataset.mode;cancelPick();closeSide();draw();
+});
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).classList.remove('on'));
+['fq','ft','fmin','fmax'].forEach(i=>$(i).oninput=draw);
+async function goCity(){
+  const q=$('city').value.trim();if(!q)return;
+  $('count').textContent='Searching...';
+  try{
+    const j=await (await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q))).json();
+    if(!j.length){$('count').textContent='Place not found. Check the spelling.';return}
+    const b=j[0].boundingbox;map.fitBounds([[+b[0],+b[2]],[+b[1],+b[3]]],{maxZoom:16});closeSide();draw();
+  }catch(e){$('count').textContent='Search failed. Check your connection.'}
+}
+$('go').onclick=goCity;
+$('city').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();goCity()}};
+
+/* ---------- Account ---------- */
+function acct(){
+  $('acct').innerHTML=me?`<b>${esc(me.email)}</b><button class="out" id="outBtn">Sign out</button>`:`Sign in to list properties and post requirements.<br><br><button id="inBtn">Sign in / Register</button>`;
+  if(me)$('outBtn').onclick=()=>signOut(auth);else $('inBtn').onclick=openAuth;
+}
+onAuthStateChanged(auth,u=>{me=(u&&u.emailVerified)?u:null;acct();draw()});
+function setAuthMode(s){signup=s;$('authTitle').textContent=s?'Create account':'Sign in';$('authGo').textContent=s?'Create account':'Sign in';$('swap').textContent=s?'Already have an account? Sign in':'Create a new account'}
+function openAuth(){closeSide();$('authErr').style.color='';$('authErr').textContent='';$('authModal').classList.add('on');$('em').focus()}
+$('swap').onclick=e=>{e.preventDefault();setAuthMode(!signup)};
+$('authX').onclick=()=>$('authModal').classList.remove('on');
+const msg={"auth/invalid-credential":"Incorrect email or password.","auth/email-already-in-use":"This email is already registered.","auth/weak-password":"Password must be at least 6 characters.","auth/invalid-email":"Enter a valid email address.","auth/too-many-requests":"Too many attempts. Please try again later."};
+$('authGo').onclick=async()=>{
+  const em=$('em').value.trim(),pw=$('pw').value;$('authGo').disabled=true;
+  try{
+    if(signup){
+      const c=await createUserWithEmailAndPassword(auth,em,pw);await sendEmailVerification(c.user);await signOut(auth);
+      setAuthMode(false);$('pw').value='';$('authErr').style.color='#0E2233';
+      $('authErr').textContent='A verification link was sent to '+em+'. Open it (check Spam too), then sign in here.';
+    }else{
+      const c=await signInWithEmailAndPassword(auth,em,pw);
+      if(!c.user.emailVerified){try{await sendEmailVerification(c.user)}catch(_){}await signOut(auth);$('authErr').textContent='Email not verified yet. We sent a new link. Open it, then sign in.'}
+      else{$('authModal').classList.remove('on');$('pw').value=''}
+    }
+  }catch(e){$('authErr').style.color='';$('authErr').textContent=msg[e.code]||'Error: '+e.code}
+  $('authGo').disabled=false;
+};
+
+/* ---------- Posting ---------- */
+function startPick(k){
+  if(!me){openAuth();return}
+  picking=k;closeSide();
+  $('hintt').textContent=k==='sale'?'Tap the map to place your property pin':'Tap the map to mark your preferred area';
+  $('hintw').style.display='flex';
+}
+function cancelPick(){picking=null;$('hintw').style.display='none'}
+$('navAdd').onclick=()=>startPick('sale');$('navReq').onclick=()=>startPick('req');$('hintx').onclick=cancelPick;
+map.on('click',e=>{
+  if(!picking)return;
+  pending={lat:e.latlng.lat,lng:e.latlng.lng};const k=picking;cancelPick();
+  $(k==='sale'?'saleModal':'reqModal').classList.add('on');
+});
+const phoneOk=p=>digits(p).length>=10;
+$('saleSave').onclick=async()=>{
+  const t=$('st').value.trim(),p=$('sp').value.trim(),h=$('sph').value.trim(),f=$('simg').files[0];
+  if(!t||!/^\d+$/.test(p)||!phoneOk(h)){$('saleErr').textContent='Title, price (numbers only) and a valid phone number are required.';return}
+  if(f&&(!f.type.startsWith('image/')||f.size>5*1048576)){$('saleErr').textContent='Photo must be an image under 5 MB.';return}
+  $('saleSave').disabled=true;$('saleErr').textContent='';
+  try{
+    let photo='';
+    if(f){try{const r=ref(store,`listings/${me.uid}/${Date.now()}-${f.name.replace(/[^\w.]/g,'_')}`);await uploadBytes(r,f);photo=await getDownloadURL(r)}catch(_){}}
+    await addDoc(collection(db,'listings'),{owner:me.uid,title:t,type:$('sty').value,size:$('ssz').value.trim(),price:Number(p),area:$('sa').value.trim(),desc:$('sd').value.trim(),phone:h,photo,status:'sale',created:serverTimestamp(),...pending});
+    ['st','ssz','sp','sa','sd','sph','simg'].forEach(i=>$(i).value='');$('saleModal').classList.remove('on');mode='mySale';draw();
+  }catch(e){$('saleErr').textContent='Could not save: '+(e.code||e.message)}
+  $('saleSave').disabled=false;
+};
+$('reqSave').onclick=async()=>{
+  const t=$('rt').value.trim(),mn=$('rmin').value.trim(),mx=$('rmax').value.trim(),h=$('rph').value.trim();
+  if(!t||(mn&&!/^\d+$/.test(mn))||(mx&&!/^\d+$/.test(mx))||!phoneOk(h)){$('reqErr').textContent='A title, numeric budget values and a valid phone number are required.';return}
+  $('reqSave').disabled=true;$('reqErr').textContent='';
+  try{
+    await addDoc(collection(db,'requirements'),{owner:me.uid,title:t,type:$('rty').value,min:Number(mn)||0,max:Number(mx)||0,area:$('ra').value.trim(),desc:$('rd').value.trim(),phone:h,status:'open',created:serverTimestamp(),...pending});
+    ['rt','rmin','rmax','ra','rd','rph'].forEach(i=>$(i).value='');$('reqModal').classList.remove('on');mode='myWanted';draw();
+  }catch(e){$('reqErr').textContent='Could not save: '+(e.code||e.message)}
+  $('reqSave').disabled=false;
+};
+acct();draw();
+</script>
+</body>
+</html>
